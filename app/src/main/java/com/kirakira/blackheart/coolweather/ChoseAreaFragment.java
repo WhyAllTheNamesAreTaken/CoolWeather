@@ -1,9 +1,13 @@
 package com.kirakira.blackheart.coolweather;
 
+import android.annotation.TargetApi;
 import android.app.Fragment;
 import android.app.ProgressDialog;
+import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,11 +18,11 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.excample.coolweather.db.City;
-import com.excample.coolweather.db.County;
-import com.excample.coolweather.db.Province;
-import com.excample.coolweather.util.HttpUtil;
-import com.excample.coolweather.util.Utility;
+import com.kirakira.blackheart.coolweather.db.City;
+import com.kirakira.blackheart.coolweather.db.County;
+import com.kirakira.blackheart.coolweather.db.Province;
+import com.kirakira.blackheart.coolweather.util.HttpUtil;
+import com.kirakira.blackheart.coolweather.util.Utility;
 
 import org.litepal.crud.DataSupport;
 
@@ -34,6 +38,8 @@ import okhttp3.Response;
 
 public class ChoseAreaFragment extends Fragment {
 
+    private static final String TAG = "ChooseAreaFragment";
+
     public static final int LEVEL_PROVINCE = 0;
 
     public static final int LEVEL_CITY = 1;
@@ -48,26 +54,43 @@ public class ChoseAreaFragment extends Fragment {
 
     private ListView listView;
 
-    private ArrayAdapter adapter;
+    private ArrayAdapter<String> adapter;
 
     private List<String> dataList = new ArrayList<>();
 
-
+    /**
+     * 省列表
+     */
     private List<Province> provinceList;
 
+    /**
+     * 市列表
+     */
     private List<City> cityList;
 
+    /**
+     * 县列表
+     */
     private List<County> countyList;
 
+    /**
+     * 选中的省份
+     */
     private Province selectedProvince;
 
+    /**
+     * 选中的城市
+     */
     private City selectedCity;
 
+    /**
+     * 当前选中的级别
+     */
     private int currentLevel;
 
-    @Nullable
     @Override
-    public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+                             Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.choose_area, container, false);
         titleText = (TextView) view.findViewById(R.id.title_text);
         backButton = (Button) view.findViewById(R.id.back_button);
@@ -89,6 +112,8 @@ public class ChoseAreaFragment extends Fragment {
                 } else if (currentLevel == LEVEL_CITY) {
                     selectedCity = cityList.get(i);
                     queryCounties();
+                } else if (currentLevel == LEVEL_COUNTY) {
+
                 }
             }
         });
@@ -103,8 +128,12 @@ public class ChoseAreaFragment extends Fragment {
                 }
             }
         });
+        queryProvinces();
     }
 
+    /**
+     * 查询全国所有的省，优先从数据库查询，如果没有查询到再去服务器上查询。
+     */
     private void queryProvinces() {
         titleText.setText("中国");
         backButton.setVisibility(View.GONE);
@@ -123,6 +152,9 @@ public class ChoseAreaFragment extends Fragment {
         }
     }
 
+    /**
+     * 查询选中省内所有的市，优先从数据库查询，如果没有查询到再去服务器上查询。
+     */
     private void queryCities() {
         titleText.setText(selectedProvince.getProvinceName());
         backButton.setVisibility(View.VISIBLE);
@@ -140,9 +172,11 @@ public class ChoseAreaFragment extends Fragment {
             String address = "http://guolin.tech/api/china/" + provinceCode;
             queryFromServer(address, "city");
         }
-
     }
 
+    /**
+     * 查询选中市内所有的县，优先从数据库查询，如果没有查询到再去服务器上查询。
+     */
     private void queryCounties() {
         titleText.setText(selectedCity.getCityName());
         backButton.setVisibility(View.VISIBLE);
@@ -164,10 +198,12 @@ public class ChoseAreaFragment extends Fragment {
     }
 
 
+    /**
+     * 根据传入的地址和类型从服务器上查询省市县数据。
+     */
     private void queryFromServer(String address, final String type) {
         showProgressDialog();
         HttpUtil.sendOkHttpRequest(address, new Callback() {
-
             @Override
             public void onResponse(Call call, Response response) throws IOException {
                 String responseText = response.body().string();
@@ -198,6 +234,7 @@ public class ChoseAreaFragment extends Fragment {
 
             @Override
             public void onFailure(Call call, IOException e) {
+                // 通过runOnUiThread()方法回到主线程处理逻辑
                 getActivity().runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
@@ -206,10 +243,12 @@ public class ChoseAreaFragment extends Fragment {
                     }
                 });
             }
-
         });
     }
 
+    /**
+     * 显示进度对话框
+     */
     private void showProgressDialog() {
         if (progressDialog == null) {
             progressDialog = new ProgressDialog(getActivity());
@@ -219,6 +258,9 @@ public class ChoseAreaFragment extends Fragment {
         progressDialog.show();
     }
 
+    /**
+     * 关闭进度对话框
+     */
     private void closeProgressDialog() {
         if (progressDialog != null) {
             progressDialog.dismiss();
